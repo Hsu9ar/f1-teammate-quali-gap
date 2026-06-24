@@ -152,11 +152,10 @@ const I18N = {
     lblLang:"Language", lblSeason:"Season", lblTeam:"Constructor", lblDrvA:"Driver A", lblDrvB:"Driver B",
     statInit:"Select a season to load data…",
     statLoading:y=>`Loading ${y} qualifying data…`,
-    statLoaded:(y,n,src)=>`Loaded ${y} season — ${n} rounds (${src}).`,
+    statLoaded:(y,n)=>`Loaded ${y} season — ${n} rounds.`,
     statNoData:y=>`No qualifying data available for ${y}.`,
-    srcLocal:"local data", srcLive:"live API",
     errSameDriver:"Please pick two different drivers.",
-    errNetwork:y=>`Load failed: can't reach the live Jolpica API (network unreachable / CORS / region-blocked).<br>Fix: run <code>python build_data.py ${y}</code> in this folder to generate local data (<code>data/quali-${y}.json</code>), then refresh to use it offline.`,
+    errNetwork:y=>`Load failed: can't reach the Jolpica API for ${y}. Check your network connection and try again later.`,
     errGeneric:m=>`Load failed: ${m}`,
     cardMedian:"Median", cardMean:"Mean", cardH2H:"Head-to-Head", cardN:"Races",
     b1title:"Per-race gap",
@@ -178,11 +177,10 @@ const I18N = {
     lblLang:"言語", lblSeason:"シーズン", lblTeam:"コンストラクター", lblDrvA:"ドライバー A", lblDrvB:"ドライバー B",
     statInit:"シーズンを選択してデータを読み込み…",
     statLoading:y=>`${y}年シーズンの予選データを読み込み中…`,
-    statLoaded:(y,n,src)=>`${y}年シーズンを読み込みました(全${n}戦、${src})。`,
+    statLoaded:(y,n)=>`${y}年シーズンを読み込みました(全${n}戦)。`,
     statNoData:y=>`${y}年シーズンの予選データはありません。`,
-    srcLocal:"ローカルデータ", srcLive:"ライブAPI",
     errSameDriver:"異なる2名のドライバーを選択してください。",
-    errNetwork:y=>`読み込み失敗:Jolpica ライブAPIに接続できません(ネットワーク到達不可 / CORS / 地域制限)。<br>対処:このフォルダで <code>python build_data.py ${y}</code> を実行してローカルデータ(<code>data/quali-${y}.json</code>)を生成し、再読み込みするとオフラインで使えます。`,
+    errNetwork:y=>`読み込み失敗:${y}年の Jolpica API に接続できません。ネットワーク接続を確認して、時間を置いて再試行してください。`,
     errGeneric:m=>`読み込み失敗:${m}`,
     cardMedian:"中央値", cardMean:"平均", cardH2H:"対戦成績", cardN:"有効レース数",
     b1title:"レースごとの差",
@@ -199,18 +197,17 @@ const I18N = {
     tipGap:(s,g)=>`${s} 差 ${g}%`, tipExcluded:"(除外)"
   },
   zh:{
-    title:"F1 队友排位中位差",
-    sub:`队友预选圈速差中位数 — 数据来自免费的 ${LINK}(Ergast 后继),实时获取,无需密钥。`,
+    title:"F1 队友中位排位差",
+    sub:`队友中位排位差 — 数据来自免费的 ${LINK}(Ergast 后继),实时获取,无需密钥。`,
     lblLang:"语言", lblSeason:"赛季", lblTeam:"车队", lblDrvA:"车手 A", lblDrvB:"车手 B",
     statInit:"选择赛季以加载数据…",
     statLoading:y=>`正在加载 ${y} 赛季排位数据…`,
-    statLoaded:(y,n,src)=>`已加载 ${y} 赛季,共 ${n} 站(${src})。`,
+    statLoaded:(y,n)=>`已加载 ${y} 赛季,共 ${n} 站。`,
     statNoData:y=>`${y} 赛季暂无可用排位数据。`,
-    srcLocal:"本地数据", srcLive:"实时 API",
     errSameDriver:"请选择两位不同的车手。",
-    errNetwork:y=>`加载失败:无法连接 Jolpica 实时 API(网络不可达 / 跨域 / 所在地区受限)。<br>解决:在本文件夹运行 <code>python build_data.py ${y}</code> 生成本地数据(<code>data/quali-${y}.json</code>),再刷新本页即可离线使用。`,
+    errNetwork:y=>`加载失败:无法连接 ${y} 赛季的 Jolpica API。请检查网络连接后稍后重试。`,
     errGeneric:m=>`加载失败:${m}`,
-    cardMedian:"中位差", cardMean:"平均差", cardH2H:"对决", cardN:"有效样本",
+    cardMedian:"中位排位差", cardMean:"平均差", cardH2H:"对决", cardN:"有效样本",
     b1title:"每站差距",
     b1hint:`柱状 = 该站 A 相对 B 的百分比差距。<span class="pos">正(红)= A 慢</span>,<span class="neg">负(绿)= A 快</span>。虚线 = 中位数。点击柱子或下方表格行可<b>剔除</b>该站(湿地 / 事故 / 非代表性圈),中位数会即时重算。`,
     b2title:"明细",
@@ -305,15 +302,6 @@ async function fetchSeason(year){
   return {year, rounds};
 }
 
-// local-first: ./data/quali-<year>.json (from build_data.py), else live API
-async function getSeasonData(year){
-  try{
-    const r = await fetch(`data/quali-${year}.json`, {cache:'no-cache'});
-    if(r.ok){ const j=await r.json(); if(j&&j.rounds&&j.rounds.length){ j._src='local'; return j; } }
-  }catch(_){}
-  const live = await fetchSeason(year); live._src='live'; return live;
-}
-
 function teamsInSeason(){
   const m=new Map();
   for(const r of seasonData.rounds) for(const res of r.results)
@@ -343,12 +331,12 @@ async function loadSeason(){
   elResult.style.display='none';
   elStatus.className='status'; elStatus.textContent=d.statLoading(year);
   try{
-    seasonData = await getSeasonData(year);
+    seasonData = await fetchSeason(year);
     if(!seasonData.rounds.length){ elStatus.textContent=d.statNoData(year); return; }
     fillSelect(elTeam, teamsInSeason(), t=>t[0], t=>t[1]);
     elTeam.disabled=false;
     onTeamChange();
-    elStatus.textContent=d.statLoaded(year, seasonData.rounds.length, seasonData._src==='local'?d.srcLocal:d.srcLive);
+    elStatus.textContent=d.statLoaded(year, seasonData.rounds.length);
   }catch(e){
     elStatus.className='status err';
     const net=(e instanceof TypeError)||/fetch/i.test(e.message);
@@ -540,8 +528,7 @@ function applyLang(){
     if(!elDrvA.disabled && !elDrvB.disabled && elDrvA.value!==elDrvB.value) compute();
     if(elStatus.className!=='status err'){
       elStatus.className='status';
-      elStatus.textContent=d.statLoaded(seasonData.year, seasonData.rounds.length,
-        seasonData._src==='local'?d.srcLocal:d.srcLive);
+      elStatus.textContent=d.statLoaded(seasonData.year, seasonData.rounds.length);
     }
   } else if(!elStatus.textContent || elStatus.className!=='status err'){
     elStatus.textContent=d.statInit;
