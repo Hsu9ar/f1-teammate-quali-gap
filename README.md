@@ -1,6 +1,6 @@
 # F1 Teammate Qualifying Gap
 
-English | [日本語](./README.ja.md)
+English | [日本語](./README.ja.md) | [中文](./README.zh.md)
 
 An interactive, single-file web app that compares two teammates' **single-lap (qualifying) pace** across an F1 season using the **median qualifying gap** — a metric that is robust to crashes, yellow flags, and mechanical failures.
 
@@ -66,7 +66,9 @@ This writes `data/quali-<year>.json`. Refresh the page — it now runs offline.
 f1-teammate-quali-gap.html   # the app (HTML + CSS + JS, single file)
 build_data.py                # Jolpica → data/quali-<year>.json (FastF1 optional)
 data/                        # generated JSON (optional, for offline use)
-README.md / README.ja.md     # docs
+README.md                    # English documentation
+README.ja.md                 # Japanese documentation
+README.zh.md                 # Chinese documentation
 ```
 
 ## License

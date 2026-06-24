@@ -1,6 +1,6 @@
 # F1 チームメイト予選差
 
-[English](./README.md) | 日本語
+[English](./README.md) | 日本語 | [中文](./README.zh.md)
 
 F1 のあるシーズンを通して、2 人のチームメイトの**単独走行(予選)ペース**を**予選差の中央値**で比較する、単一ファイルのインタラクティブ Web アプリです。中央値はクラッシュ・黄旗・マシントラブルといった外れ値に強い指標です。
 
@@ -66,7 +66,9 @@ python build_data.py 2021 2022 2023 2024   # 複数
 f1-teammate-quali-gap.html   # アプリ本体(HTML + CSS + JS、単一ファイル)
 build_data.py                # Jolpica → data/quali-<year>.json(FastF1 任意)
 data/                        # 生成された JSON(オフライン用、任意)
-README.md / README.ja.md     # ドキュメント
+README.md                    # English documentation
+README.ja.md                 # 日本語ドキュメント
+README.zh.md                 # 中文文档
 ```
 
 ## ライセンス
