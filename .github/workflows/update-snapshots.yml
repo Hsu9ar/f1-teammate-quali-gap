@@ -1,0 +1,44 @@
+name: Update offline snapshots
+
+# Generates data/quali-<year>.json on GitHub's servers (which can reach the API)
+# and commits them, so the offline fallback is always pre-stored in the repo —
+# no user ever needs to load the app live first.
+
+on:
+  workflow_dispatch:        # manual run from the Actions tab
+  schedule:
+    # Daily at 06:00 UTC. Jolpica updates once on the Monday after a race weekend
+    # (sometimes delayed), so a daily run reliably catches new/ corrected data
+    # within a day. Each run only re-fetches the current season (~5 requests);
+    # past seasons are skipped, so this is effectively free.
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: write           # allow the workflow to commit the data/ files
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate snapshots
+        # No args -> every season 2006..current. Past seasons already saved are
+        # skipped; only the current season is re-fetched each run.
+        run: node tools/build-snapshots.mjs
+
+      - name: Commit updated snapshots
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "No snapshot changes."
+          else
+            git commit -m "chore: refresh offline qualifying snapshots"
+            git push
+          fi

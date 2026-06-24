@@ -5,3 +5,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Staging for the separate data-backup repo (move it out to its own repo; do not commit here)
+f1-data-backup/
