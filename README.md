@@ -1,6 +1,6 @@
 # F1 Teammate Qualifying Gap
 
-English | [日本語](./README.ja.md) | [中文](./README.zh.md)
+English | [日本語](./README.ja.md) | [简体中文](./README.zh.md)
 
 An interactive browser tool for comparing two Formula 1 teammates' qualifying pace across a season. It uses the **median qualifying gap** to reduce the influence of outlier sessions such as crashes, yellow flags, technical issues, or heavily compromised laps.
 
