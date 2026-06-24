@@ -44,13 +44,28 @@
   @media(max-width:640px){.canvas-wrap{height:180px;}}
   .toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;margin:-2px 0 12px;user-select:none;}
   .toggle input{accent-color:var(--accentB);}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#0f1420;}
+  table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0;font-size:13px;}
+  th,td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  tbody tr:last-child td{border-bottom:0;}
   th:first-child,td:first-child{text-align:left;}
-  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
-  tr.excluded td{opacity:.38;text-decoration:line-through;}
+  th{color:#a8b3c7;background:#171e2d;font-weight:650;font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
+  td{color:#dbe4f4;}
+  tbody tr:nth-child(even) td{background:rgba(255,255,255,.018);}
+  tr.excluded td{opacity:.48;}
   tr.race-row{cursor:pointer;}
-  tr.race-row:hover td{background:var(--panel2);}
+  tr.race-row:hover td{background:#212a3d;}
+  .race-cell{min-width:220px;font-weight:600;color:#f0f4fb;}
+  .round-pill,.session-pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:750;}
+  .round-pill{min-width:36px;margin-right:8px;padding:2px 7px;background:#243049;color:#dfe8fb;}
+  .race-name{color:#d6deed;}
+  .session-pill{min-width:34px;padding:2px 7px;background:#263241;color:#f6f9ff;border:1px solid #38465e;}
+  .time-cell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;font-weight:700;color:#f5f8ff;background:rgba(255,255,255,.025);}
+  .gap-cell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800;}
+  .gap-badge{display:inline-flex;justify-content:flex-end;min-width:82px;padding:3px 8px;border-radius:999px;color:#fff;border:1px solid transparent;}
+  .gap-pos{background:rgba(255,91,91,.24);border-color:rgba(255,91,91,.72);color:#ffd9d9;}
+  .gap-neg{background:rgba(39,209,127,.22);border-color:rgba(39,209,127,.72);color:#d7ffe9;}
+  .faster-cell{font-weight:750;color:#f3f7ff;}
   .legend{font-size:12px;color:var(--muted);margin-top:10px;}
   .pos{color:var(--pos);} .neg{color:var(--neg);}
   .footer{font-size:12px;color:var(--muted);margin-top:24px;border-top:1px solid var(--line);padding-top:14px;}
@@ -111,14 +126,16 @@
     <div class="chartbox">
       <h3 id="b2title"></h3>
       <p class="hint" id="b2hint"></p>
-      <table>
-        <thead><tr>
-          <th id="th-round"></th><th id="th-sess"></th>
-          <th id="thA">A</th><th id="thB">B</th>
-          <th id="th-gap"></th><th id="th-faster"></th>
-        </tr></thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th id="th-round"></th><th id="th-sess"></th>
+            <th id="thA">A</th><th id="thB">B</th>
+            <th id="th-gap"></th><th id="th-faster"></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -393,9 +410,9 @@ function compute(){
     const tr=document.createElement('tr');
     tr.className='race-row'+(excluded.has(x.round)?' excluded':'');
     const faster = x.ta<x.tb? aCode : bCode;
-    tr.innerHTML=`<td>R${x.round} ${x.raceName.replace(' Grand Prix',' GP')}</td>`
-      +`<td>${x.sess}</td><td>${x.ta.toFixed(3)}</td><td>${x.tb.toFixed(3)}</td>`
-      +`<td class="${x.gap>=0?'pos':'neg'}">${fmt(x.gap)}</td><td>${faster}</td>`;
+    tr.innerHTML=`<td class="race-cell"><span class="round-pill">R${x.round}</span><span class="race-name">${x.raceName.replace(' Grand Prix',' GP')}</span></td>`
+      +`<td><span class="session-pill">${x.sess}</span></td><td class="time-cell">${x.ta.toFixed(3)}</td><td class="time-cell">${x.tb.toFixed(3)}</td>`
+      +`<td class="gap-cell"><span class="gap-badge ${x.gap>=0?'gap-pos':'gap-neg'}">${fmt(x.gap)}%</span></td><td class="faster-cell">${faster}</td>`;
     tr.onclick=()=>{ excluded.has(x.round)?excluded.delete(x.round):excluded.add(x.round); compute(); };
     tb.appendChild(tr);
   }

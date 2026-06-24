@@ -2,70 +2,89 @@
 
 English | [日本語](./README.ja.md) | [中文](./README.zh.md)
 
-An interactive, single-file web app that compares two teammates' **single-lap (qualifying) pace** across an F1 season using the **median qualifying gap** — a metric that is robust to crashes, yellow flags, and mechanical failures.
+An interactive browser tool for comparing two Formula 1 teammates' qualifying pace across a season. It uses the **median qualifying gap** to reduce the influence of outlier sessions such as crashes, yellow flags, technical issues, or heavily compromised laps.
 
-🔗 **Live demo:** https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html
+## What This Tool Does
 
-If the link returns 404, enable GitHub Pages for this repository first:
-**Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save**.
+- Loads F1 qualifying results by season.
+- Lets you choose a constructor and compare any two teammates.
+- Calculates per-race percentage gaps, season median, season mean, head-to-head score, and sample size.
+- Visualizes every race in a bar chart with a focus view for extreme outliers.
+- Lets you exclude unrepresentative rounds by clicking a chart bar or table row.
+- Supports English, Japanese, and Chinese UI.
 
-## Why median, not mean?
+## How To Use It
 
-Qualifying gaps are full of contaminated samples: a crash, a lap deleted under yellow, a Q1 knockout with only one timed run. These produce extreme values that drag the **mean** away from reality. The **median** ignores outliers, so it reflects the typical gap between two drivers far more reliably.
+1. Open `f1-teammate-quali-gap.html` in a browser or host it as a static page.
+2. Select a season, constructor, Driver A, and Driver B.
+3. Read the summary cards for median gap, mean gap, head-to-head score, and valid race count.
+4. Use the chart to inspect round-by-round variation.
+5. Click a bar or table row to exclude wet, crashed, or otherwise unrepresentative sessions.
+6. Toggle **Focus view** to switch between a readable outlier-clipped chart and the full chart scale.
 
-## How the metric is computed
+## How To Read The Metric
 
-For every round of the season:
+The gap is calculated from Driver A's lap time relative to Driver B's lap time:
 
-1. Take each driver's fastest lap in the **highest qualifying session both reached** (Q3 > Q2 > Q1) — so the comparison is always like-for-like.
-2. Compare as a **percentage**, not raw seconds, to remove track-length differences:
-   `gap% = (t_A − t_B) / t_B × 100`
-3. Take the **median** of those per-round percentages over the season.
+```text
+gap% = (t_A - t_B) / t_B * 100
+```
 
-Caveats: dry/wet sessions are not separated by the data source — exclude wet rounds manually (click the bar or table row). The metric measures qualifying/single-lap pace only, not race pace.
+- Positive value: Driver A was slower than Driver B.
+- Negative value: Driver A was faster than Driver B.
+- Median: the typical season gap after sorting all valid per-race gaps.
+- Mean: useful as a reference, but more sensitive to extreme sessions.
 
-## Features
+## Calculation Method
 
-- Pick **season → constructor → two drivers**; everything recomputes instantly.
-- **Median / mean / head-to-head / sample size** summary cards.
-- Per-race bar chart with a robust y-axis that **clips extreme outliers** (their true value is labelled on the bar) so normal gaps stay readable. Toggle it off to see the full range.
-- **Click any bar or table row to exclude** that round; the median recomputes live.
-- UI in **English / 日本語 / 中文** (switcher, top-right).
-- **Local-first data**: works offline / in regions where the live API is unreachable.
+For each qualifying session:
 
-## Data source
+1. Find the highest qualifying segment both drivers reached: Q3, then Q2, then Q1.
+2. Take each driver's fastest lap in that shared segment.
+3. Convert the lap-time difference into a percentage.
+4. Compute the season median from all included rounds.
 
-Free [Jolpica-F1 API](https://github.com/jolpica/jolpica-f1) (the successor to the deprecated Ergast API). No API key required.
+This avoids comparing a Q3 lap against a Q1 lap and makes gaps comparable across tracks of different lengths.
 
-## Running it
+## Data Source
 
-It's a single static HTML file — just open `f1-teammate-quali-gap.html` in a browser.
+The app uses the free [Jolpica-F1 API](https://github.com/jolpica/jolpica-f1), the community successor to the Ergast API. No API key is required.
 
-The page tries to load local data first (`data/quali-<year>.json`) and falls back to the live API. If the live API is unreachable (network / CORS / region block), generate local data once:
+The page tries local data first:
+
+```text
+data/quali-<year>.json
+```
+
+If local data is unavailable, it falls back to the live API.
+
+## Generate Local Data
+
+Local JSON data makes the app faster and usable in environments where the live API is unavailable.
 
 ```bash
-python build_data.py 2024            # one season
-python build_data.py 2021 2022 2023 2024   # several
+python build_data.py 2024
+python build_data.py 2021 2022 2023 2024
 ```
 
-This writes `data/quali-<year>.json`. Refresh the page — it now runs offline.
+The script writes files such as `data/quali-2024.json`.
 
-### Optional: richer data via FastF1
+## Optional FastF1 Extension
 
-`build_data.py` includes a `build_with_fastf1()` example. [FastF1](https://docs.fastf1.dev/) is a Python library (not a browser API) that can pull telemetry, tyre, and practice data. Install with `pip install fastf1` and switch the call in `main()` if you want to extend the dataset.
+`build_data.py` includes a `build_with_fastf1()` example. [FastF1](https://docs.fastf1.dev/) is a Python library, not a browser API, but it can be used to extend this project with telemetry, tyre, and practice-session data.
 
-## Deploy on GitHub Pages
+## Limitations
 
-1. Create a repository and push these files (see below).
-2. On GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `main`, folder `/ (root)`, **Save**.
-3. After a minute your page is live at `https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html`.
+- The source data does not label wet and dry sessions.
+- Deleted laps, traffic, yellow flags, and mechanical issues may still require manual exclusion.
+- The metric reflects qualifying and single-lap pace only. It does not measure race pace, tyre management, or strategy execution.
 
-## Project structure
+## Project Structure
 
-```
-f1-teammate-quali-gap.html   # the app (HTML + CSS + JS, single file)
-build_data.py                # Jolpica → data/quali-<year>.json (FastF1 optional)
-data/                        # generated JSON (optional, for offline use)
+```text
+f1-teammate-quali-gap.html   # Static web app
+build_data.py                # Data export script
+data/                        # Optional generated JSON data
 README.md                    # English documentation
 README.ja.md                 # Japanese documentation
 README.zh.md                 # Chinese documentation
