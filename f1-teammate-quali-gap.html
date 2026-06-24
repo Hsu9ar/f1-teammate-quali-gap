@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 Teammate Qualifying Gap</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141925; --panel2:#1c2333; --line:#2a3346;
+    --txt:#e6ebf5; --muted:#8a97ad; --accent:#e10600; --accentB:#00b4ff;
+    --pos:#ff5b5b; --neg:#27d17f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.5;}
+  .wrap{max-width:1040px;margin:0 auto;padding:24px 18px 64px;position:relative;}
+  .langbar{position:absolute;top:20px;right:18px;display:flex;align-items:center;gap:6px;z-index:5;}
+  .langbar select{padding:6px 8px;font-size:13px;}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:.3px;padding-right:130px;}
+  h1 .bar{display:inline-block;width:6px;height:22px;background:var(--accent);
+    margin-right:10px;vertical-align:-2px;border-radius:2px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 22px;}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px;}
+  .ctl{display:flex;flex-direction:column;gap:5px;min-width:130px;flex:1;}
+  .ctl label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+  select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;font-size:14px;outline:none;cursor:pointer;}
+  select:focus{border-color:var(--accentB);}
+  select:disabled{opacity:.5;cursor:not-allowed;}
+  .status{font-size:13px;color:var(--muted);min-height:18px;margin-bottom:14px;}
+  .status.err{color:var(--pos);}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .card .k{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;}
+  .card .v{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;}
+  .card .v small{font-size:13px;color:var(--muted);font-weight:400;}
+  .chartbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:18px;}
+  .chartbox h3{margin:0 0 4px;font-size:15px;}
+  .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
+  .canvas-wrap{position:relative;height:220px;}
+  @media(max-width:640px){.canvas-wrap{height:180px;}}
+  .toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;margin:-2px 0 12px;user-select:none;}
+  .toggle input{accent-color:var(--accentB);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  th:first-child,td:first-child{text-align:left;}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
+  tr.excluded td{opacity:.38;text-decoration:line-through;}
+  tr.race-row{cursor:pointer;}
+  tr.race-row:hover td{background:var(--panel2);}
+  .legend{font-size:12px;color:var(--muted);margin-top:10px;}
+  .pos{color:var(--pos);} .neg{color:var(--neg);}
+  .footer{font-size:12px;color:var(--muted);margin-top:24px;border-top:1px solid var(--line);padding-top:14px;}
+  a{color:var(--accentB);text-decoration:none;}
+  .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:0px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="langbar">
+    <select id="lang" title="Language / 言語 / 语言">
+      <option value="en">English</option>
+      <option value="ja">日本語</option>
+      <option value="zh">中文</option>
+    </select>
+  </div>
+
+  <h1><span class="bar"></span><span id="t-title"></span></h1>
+  <p class="sub" id="sub"></p>
+
+  <div class="controls">
+    <div class="ctl">
+      <label id="l-season"></label>
+      <select id="season"></select>
+    </div>
+    <div class="ctl">
+      <label id="l-team"></label>
+      <select id="team" disabled></select>
+    </div>
+    <div class="ctl">
+      <label id="l-drvA"></label>
+      <select id="drvA" disabled></select>
+    </div>
+    <div class="ctl">
+      <label id="l-drvB"></label>
+      <select id="drvB" disabled></select>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div id="result" style="display:none;">
+    <div class="cards">
+      <div class="card"><div class="k" id="k-median"></div><div class="v" id="mMedian">–</div></div>
+      <div class="card"><div class="k" id="k-mean"></div><div class="v" id="mMean">–</div></div>
+      <div class="card"><div class="k" id="k-h2h"></div><div class="v" id="mH2H">–</div></div>
+      <div class="card"><div class="k" id="k-n"></div><div class="v" id="mN">–</div></div>
+    </div>
+
+    <div class="chartbox">
+      <h3 id="b1title"></h3>
+      <p class="hint" id="b1hint"></p>
+      <label class="toggle"><input type="checkbox" id="clipToggle" checked><span id="clipLabel"></span></label>
+      <div class="canvas-wrap"><canvas id="chart"></canvas></div>
+      <div class="legend" id="sessionNote"></div>
+    </div>
+
+    <div class="chartbox">
+      <h3 id="b2title"></h3>
+      <p class="hint" id="b2hint"></p>
+      <table>
+        <thead><tr>
+          <th id="th-round"></th><th id="th-sess"></th>
+          <th id="thA">A</th><th id="thB">B</th>
+          <th id="th-gap"></th><th id="th-faster"></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer" id="footer"></div>
+</div>
+
+<script>
+/* ---------------- i18n ---------------- */
+const LINK='<a href="https://github.com/jolpica/jolpica-f1" target="_blank" rel="noopener">Jolpica-F1 API</a>';
+const I18N = {
+  en:{
+    title:"F1 Teammate Qualifying Gap",
+    sub:`Teammate Median Qualifying Gap — data from the free ${LINK} (Ergast successor), fetched live, no key required.`,
+    lblLang:"Language", lblSeason:"Season", lblTeam:"Constructor", lblDrvA:"Driver A", lblDrvB:"Driver B",
+    statInit:"Select a season to load data…",
+    statLoading:y=>`Loading ${y} qualifying data…`,
+    statLoaded:(y,n,src)=>`Loaded ${y} season — ${n} rounds (${src}).`,
+    statNoData:y=>`No qualifying data available for ${y}.`,
+    srcLocal:"local data", srcLive:"live API",
+    errSameDriver:"Please pick two different drivers.",
+    errNetwork:y=>`Load failed: can't reach the live Jolpica API (network unreachable / CORS / region-blocked).<br>Fix: run <code>python build_data.py ${y}</code> in this folder to generate local data (<code>data/quali-${y}.json</code>), then refresh to use it offline.`,
+    errGeneric:m=>`Load failed: ${m}`,
+    cardMedian:"Median", cardMean:"Mean", cardH2H:"Head-to-Head", cardN:"Races",
+    b1title:"Per-race gap",
+    b1hint:`Each bar = Driver A's percentage gap to B that round. <span class="pos">Positive (red) = A slower</span>, <span class="neg">negative (green) = A faster</span>. Dashed line = median. Click a bar or a table row to <b>exclude</b> that round (wet / crash / unrepresentative lap); the median recomputes instantly.`,
+    b2title:"Detail",
+    b2hint:`For each round, the fastest lap in the <b>highest common qualifying session</b> both reached (Q3 &gt; Q2 &gt; Q1), compared as a percentage (removes track-length differences).`,
+    thRound:"Round", thSession:"Session", thGap:"Gap %", thFaster:"Faster",
+    clipLabel:"Focus view — clip extreme outliers (their true value is labelled on the bar)",
+    clipTag:v=>`actual ${v}%`,
+    footer:`Method: for each round, take the fastest lap in the highest common session both drivers reached (Q3 &gt; Q2 &gt; Q1), compute <code>(t_A − t_B) / t_B × 100%</code>, then take the season <b>median</b>. The median is robust to outliers like crashes, yellow flags and mechanical issues. Reflects single-lap / qualifying pace only, not race pace. The API doesn't flag wet sessions — exclude wet rounds manually.`,
+    noteSlow:c=>`${c} slower`, noteFast:c=>`${c} faster`, noteMedian:"Median:",
+    noteMeaning:(a,b)=>`positive means ${a} is on average slower than ${b}.`,
+    axisTitle:c=>`${c} vs teammate (%)`, medLabel:v=>`median ${v}%`,
+    tipGap:(s,g)=>`${s} gap ${g}%`, tipExcluded:" (excluded)"
+  },
+  ja:{
+    title:"F1 チームメイト予選差",
+    sub:`予選ラップ差の中央値 — 無料の ${LINK}(Ergast の後継)からリアルタイム取得、APIキー不要。`,
+    lblLang:"言語", lblSeason:"シーズン", lblTeam:"コンストラクター", lblDrvA:"ドライバー A", lblDrvB:"ドライバー B",
+    statInit:"シーズンを選択してデータを読み込み…",
+    statLoading:y=>`${y}年シーズンの予選データを読み込み中…`,
+    statLoaded:(y,n,src)=>`${y}年シーズンを読み込みました(全${n}戦、${src})。`,
+    statNoData:y=>`${y}年シーズンの予選データはありません。`,
+    srcLocal:"ローカルデータ", srcLive:"ライブAPI",
+    errSameDriver:"異なる2名のドライバーを選択してください。",
+    errNetwork:y=>`読み込み失敗:Jolpica ライブAPIに接続できません(ネットワーク到達不可 / CORS / 地域制限)。<br>対処:このフォルダで <code>python build_data.py ${y}</code> を実行してローカルデータ(<code>data/quali-${y}.json</code>)を生成し、再読み込みするとオフラインで使えます。`,
+    errGeneric:m=>`読み込み失敗:${m}`,
+    cardMedian:"中央値", cardMean:"平均", cardH2H:"対戦成績", cardN:"有効レース数",
+    b1title:"レースごとの差",
+    b1hint:`各バー = そのレースでのドライバーAのBに対する%差。<span class="pos">正(赤)= Aが遅い</span>、<span class="neg">負(緑)= Aが速い</span>。破線 = 中央値。バーまたは表の行をクリックするとそのレースを<b>除外</b>(ウェット/クラッシュ/非代表ラップ)でき、中央値が即時に再計算されます。`,
+    b2title:"詳細",
+    b2hint:`各レースで、両者が到達した<b>最も上位の共通予選セッション</b>(Q3 &gt; Q2 &gt; Q1)の最速ラップを%で比較(コース長の違いを排除)。`,
+    thRound:"レース", thSession:"セッション", thGap:"差 %", thFaster:"速い方",
+    clipLabel:"フォーカス表示 — 極端な外れ値をクリップ(実際の値はバー上に表示)",
+    clipTag:v=>`実値 ${v}%`,
+    footer:`方法:各レースで両ドライバーが到達した最高共通セッション(Q3 &gt; Q2 &gt; Q1)の最速ラップを取り、<code>(t_A − t_B) / t_B × 100%</code> を計算し、シーズンの<b>中央値</b>をとります。中央値はクラッシュ・黄旗・マシントラブルなどの外れ値に強い指標です。単独走行/予選のペースのみを表し、決勝ペースは反映しません。APIはウェットを判別しないため、ウェットのレースは手動で除外してください。`,
+    noteSlow:c=>`${c} が遅い`, noteFast:c=>`${c} が速い`, noteMedian:"中央値:",
+    noteMeaning:(a,b)=>`正の値は ${a} が平均して ${b} より遅いことを意味します。`,
+    axisTitle:c=>`${c} のチームメイト比 (%)`, medLabel:v=>`中央 ${v}%`,
+    tipGap:(s,g)=>`${s} 差 ${g}%`, tipExcluded:"(除外)"
+  },
+  zh:{
+    title:"F1 队友排位中位差",
+    sub:`队友预选圈速差中位数 — 数据来自免费的 ${LINK}(Ergast 后继),实时获取,无需密钥。`,
+    lblLang:"语言", lblSeason:"赛季", lblTeam:"车队", lblDrvA:"车手 A", lblDrvB:"车手 B",
+    statInit:"选择赛季以加载数据…",
+    statLoading:y=>`正在加载 ${y} 赛季排位数据…`,
+    statLoaded:(y,n,src)=>`已加载 ${y} 赛季,共 ${n} 站(${src})。`,
+    statNoData:y=>`${y} 赛季暂无可用排位数据。`,
+    srcLocal:"本地数据", srcLive:"实时 API",
+    errSameDriver:"请选择两位不同的车手。",
+    errNetwork:y=>`加载失败:无法连接 Jolpica 实时 API(网络不可达 / 跨域 / 所在地区受限)。<br>解决:在本文件夹运行 <code>python build_data.py ${y}</code> 生成本地数据(<code>data/quali-${y}.json</code>),再刷新本页即可离线使用。`,
+    errGeneric:m=>`加载失败:${m}`,
+    cardMedian:"中位差", cardMean:"平均差", cardH2H:"对决", cardN:"有效样本",
+    b1title:"每站差距",
+    b1hint:`柱状 = 该站 A 相对 B 的百分比差距。<span class="pos">正(红)= A 慢</span>,<span class="neg">负(绿)= A 快</span>。虚线 = 中位数。点击柱子或下方表格行可<b>剔除</b>该站(湿地 / 事故 / 非代表性圈),中位数会即时重算。`,
+    b2title:"明细",
+    b2hint:`每站取两人都进入的<b>最高共同排位阶段</b>的最快圈,按百分比对比(消除赛道长度差异)。`,
+    thRound:"站", thSession:"阶段", thGap:"差距 %", thFaster:"更快",
+    clipLabel:"聚焦视图 — 裁剪极端离群值(真实数值标在柱子上)",
+    clipTag:v=>`实际 ${v}%`,
+    footer:`方法:对每一站,取两位车手都达到的最高共同阶段(Q3 &gt; Q2 &gt; Q1)的最快圈,计算 <code>(t_A − t_B) / t_B × 100%</code>,再取整季<b>中位数</b>。中位数对撞车、黄旗、机械故障等离群值更稳健。仅反映单圈/排位实力,不代表正赛速度。API 未标注干湿地,如遇湿地站请手动剔除。`,
+    noteSlow:c=>`${c} 慢`, noteFast:c=>`${c} 快`, noteMedian:"中位数:",
+    noteMeaning:(a,b)=>`正值代表 ${a} 平均慢于 ${b}。`,
+    axisTitle:c=>`${c} 相对队友 (%)`, medLabel:v=>`中位 ${v}%`,
+    tipGap:(s,g)=>`${s} 差距 ${g}%`, tipExcluded:"(已剔除)"
+  }
+};
+let curLang='en';
+const D = ()=>I18N[curLang];
+
+/* ---------------- elements ---------------- */
+const API = "https://api.jolpi.ca/ergast/f1";
+const elLang   = document.getElementById('lang');
+const elSeason = document.getElementById('season');
+const elTeam   = document.getElementById('team');
+const elDrvA   = document.getElementById('drvA');
+const elDrvB   = document.getElementById('drvB');
+const elStatus = document.getElementById('status');
+const elResult = document.getElementById('result');
+
+let seasonData = null;
+let excluded = new Set();
+let chart = null;
+
+/* ---------------- seasons (Q1/Q2/Q3 format from 2006) ---------------- */
+const THIS_YEAR = new Date().getFullYear();
+(function(){
+  for(let y=THIS_YEAR; y>=2006; y--){
+    const o=document.createElement('option'); o.value=y; o.textContent=y; elSeason.appendChild(o);
+  }
+  elSeason.value = Math.min(THIS_YEAR, 2024);
+})();
+
+/* ---------------- helpers ---------------- */
+const setT=(id,s)=>{const e=document.getElementById(id); if(e) e.textContent=s;};
+const setH=(id,s)=>{const e=document.getElementById(id); if(e) e.innerHTML=s;};
+
+function timeToSec(t){
+  if(!t) return null; t=t.trim(); if(!t) return null;
+  const p=t.split(':');
+  const s = p.length===2 ? parseInt(p[0],10)*60+parseFloat(p[1]) : parseFloat(p[0]);
+  return isNaN(s)?null:s;
+}
+function bestCommonSession(a,b){
+  if(a.Q3&&b.Q3) return 'Q3';
+  if(a.Q2&&b.Q2) return 'Q2';
+  if(a.Q1&&b.Q1) return 'Q1';
+  return null;
+}
+function median(arr){
+  if(!arr.length) return null;
+  const s=[...arr].sort((x,y)=>x-y), m=Math.floor(s.length/2);
+  return s.length%2? s[m] : (s[m-1]+s[m])/2;
+}
+const fmt=(x,d=3)=>(x>=0?'+':'')+x.toFixed(d);
+
+/* ---------------- data ---------------- */
+async function fetchSeason(year){
+  const byRound = new Map();
+  let offset=0, total=Infinity;
+  while(offset < total){
+    const r = await fetch(`${API}/${year}/qualifying/?limit=100&offset=${offset}&format=json`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json(); const md=j.MRData; total=parseInt(md.total,10);
+    const races = md.RaceTable.Races||[];
+    for(const race of races){
+      const key=race.round;
+      if(!byRound.has(key)) byRound.set(key,{round:key, raceName:race.raceName, results:[]});
+      const bucket=byRound.get(key);
+      for(const q of (race.QualifyingResults||[])){
+        bucket.results.push({
+          driverId:q.Driver.driverId,
+          code:q.Driver.code || q.Driver.familyName.slice(0,3).toUpperCase(),
+          name:q.Driver.familyName,
+          constructorId:q.Constructor.constructorId,
+          constructorName:q.Constructor.name,
+          Q1:q.Q1||'', Q2:q.Q2||'', Q3:q.Q3||''
+        });
+      }
+    }
+    offset += 100;
+    if(races.length===0) break;
+  }
+  const rounds=[...byRound.values()].sort((a,b)=>+a.round - +b.round);
+  return {year, rounds};
+}
+
+// local-first: ./data/quali-<year>.json (from build_data.py), else live API
+async function getSeasonData(year){
+  try{
+    const r = await fetch(`data/quali-${year}.json`, {cache:'no-cache'});
+    if(r.ok){ const j=await r.json(); if(j&&j.rounds&&j.rounds.length){ j._src='local'; return j; } }
+  }catch(_){}
+  const live = await fetchSeason(year); live._src='live'; return live;
+}
+
+function teamsInSeason(){
+  const m=new Map();
+  for(const r of seasonData.rounds) for(const res of r.results)
+    if(!m.has(res.constructorId)) m.set(res.constructorId, res.constructorName);
+  return [...m.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+}
+function driversForTeam(teamId){
+  const m=new Map();
+  for(const r of seasonData.rounds) for(const res of r.results)
+    if(res.constructorId===teamId){
+      if(!m.has(res.driverId)) m.set(res.driverId,{name:res.name,code:res.code,count:0});
+      m.get(res.driverId).count++;
+    }
+  return [...m.entries()].map(([id,v])=>({id,...v})).sort((a,b)=>b.count-a.count);
+}
+function fillSelect(sel, items, val, label){
+  sel.innerHTML='';
+  for(const it of items){
+    const o=document.createElement('option'); o.value=val(it); o.textContent=label(it); sel.appendChild(o);
+  }
+  sel.disabled = items.length===0;
+}
+
+async function loadSeason(){
+  const year=elSeason.value; const d=D();
+  elTeam.disabled=elDrvA.disabled=elDrvB.disabled=true;
+  elResult.style.display='none';
+  elStatus.className='status'; elStatus.textContent=d.statLoading(year);
+  try{
+    seasonData = await getSeasonData(year);
+    if(!seasonData.rounds.length){ elStatus.textContent=d.statNoData(year); return; }
+    fillSelect(elTeam, teamsInSeason(), t=>t[0], t=>t[1]);
+    elTeam.disabled=false;
+    onTeamChange();
+    elStatus.textContent=d.statLoaded(year, seasonData.rounds.length, seasonData._src==='local'?d.srcLocal:d.srcLive);
+  }catch(e){
+    elStatus.className='status err';
+    const net=(e instanceof TypeError)||/fetch/i.test(e.message);
+    elStatus.innerHTML = net ? d.errNetwork(year) : d.errGeneric(e.message);
+  }
+}
+
+function onTeamChange(){
+  const drs=driversForTeam(elTeam.value);
+  fillSelect(elDrvA, drs, x=>x.id, x=>`${x.name} (${x.count})`);
+  fillSelect(elDrvB, drs, x=>x.id, x=>`${x.name} (${x.count})`);
+  elDrvA.disabled=elDrvB.disabled = drs.length<2;
+  if(drs.length>=2){ elDrvA.value=drs[0].id; elDrvB.value=drs[1].id; }
+  excluded.clear();
+  compute();
+}
+
+function compute(){
+  const d=D();
+  if(elDrvA.disabled || elDrvB.disabled){ elResult.style.display='none'; return; }
+  const aId=elDrvA.value, bId=elDrvB.value;
+  if(aId===bId){ elResult.style.display='none';
+    elStatus.className='status err'; elStatus.textContent=d.errSameDriver; return; }
+  if(elStatus.className==='status err') elStatus.className='status';
+
+  const teamId=elTeam.value;
+  const rows=[];
+  for(const r of seasonData.rounds){
+    const a=r.results.find(x=>x.driverId===aId && x.constructorId===teamId);
+    const b=r.results.find(x=>x.driverId===bId && x.constructorId===teamId);
+    if(!a||!b) continue;
+    const sess=bestCommonSession(a,b); if(!sess) continue;
+    const ta=timeToSec(a[sess]), tb=timeToSec(b[sess]);
+    if(ta==null||tb==null) continue;
+    rows.push({round:r.round, raceName:r.raceName, sess, ta, tb, gap:(ta-tb)/tb*100});
+  }
+
+  const active=rows.filter(x=>!excluded.has(x.round));
+  const gaps=active.map(x=>x.gap);
+  const med=median(gaps), mean=gaps.length? gaps.reduce((s,x)=>s+x,0)/gaps.length : null;
+  const aFaster=active.filter(x=>x.ta<x.tb).length;
+  const bFaster=active.filter(x=>x.tb<x.ta).length;
+  const aCode=elDrvA.options[elDrvA.selectedIndex].text.split(' (')[0];
+  const bCode=elDrvB.options[elDrvB.selectedIndex].text.split(' (')[0];
+
+  document.getElementById('mMedian').innerHTML = med==null?'–':`${fmt(med)}<small> %</small>`;
+  document.getElementById('mMean').innerHTML   = mean==null?'–':`${fmt(mean)}<small> %</small>`;
+  document.getElementById('mH2H').innerHTML    = `${aFaster}<small> : </small>${bFaster}`;
+  document.getElementById('mN').textContent    = active.length + (excluded.size?` / ${rows.length}`:'');
+  document.getElementById('thA').textContent   = aCode;
+  document.getElementById('thB').textContent   = bCode;
+  document.getElementById('sessionNote').innerHTML =
+      `<span class="swatch" style="background:var(--pos)"></span>${d.noteSlow(aCode)}　`
+    + `<span class="swatch" style="background:var(--neg)"></span>${d.noteFast(aCode)}　|　`
+    + `${d.noteMedian}<b>${med==null?'–':fmt(med)+'%'}</b>　${d.noteMeaning(aCode,bCode)}`;
+
+  const tb=document.getElementById('tbody'); tb.innerHTML='';
+  for(const x of rows){
+    const tr=document.createElement('tr');
+    tr.className='race-row'+(excluded.has(x.round)?' excluded':'');
+    const faster = x.ta<x.tb? aCode : bCode;
+    tr.innerHTML=`<td>R${x.round} ${x.raceName.replace(' Grand Prix',' GP')}</td>`
+      +`<td>${x.sess}</td><td>${x.ta.toFixed(3)}</td><td>${x.tb.toFixed(3)}</td>`
+      +`<td class="${x.gap>=0?'pos':'neg'}">${fmt(x.gap)}</td><td>${faster}</td>`;
+    tr.onclick=()=>{ excluded.has(x.round)?excluded.delete(x.round):excluded.add(x.round); compute(); };
+    tb.appendChild(tr);
+  }
+
+  drawChart(rows, med, aCode);
+  elResult.style.display='';
+}
+
+// Robust y-range via Tukey fences, so a couple of huge outliers don't flatten
+// every meaningful bar. Outliers stay drawn (clipped at the edge) with a label.
+function robustBounds(vals){
+  if(vals.length<4) return null;
+  const s=[...vals].sort((a,b)=>a-b);
+  const q=p=>{const i=(s.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i);
+    return s[lo]+(s[hi]-s[lo])*(i-lo);};
+  const q1=q(.25), q3=q(.75), iqr=q3-q1, lf=q1-1.5*iqr, hf=q3+1.5*iqr;
+  const inb=s.filter(v=>v>=lf&&v<=hf);
+  let lo=Math.min(0,...inb), hi=Math.max(0,...inb);
+  const pad=Math.max((hi-lo)*0.18, 0.08); lo-=pad; hi+=pad;
+  const MIN=0.8; if(hi-lo<MIN){const c=(hi+lo)/2; lo=c-MIN/2; hi=c+MIN/2;}
+  return {min:lo,max:hi};
+}
+
+function drawChart(rows, med, aCode){
+  const d=D();
+  const labels=rows.map(x=>'R'+x.round);
+  const data=rows.map(x=>x.gap);
+  const colors=rows.map(x=> excluded.has(x.round) ? '#39425a' : (x.gap>=0?'#ff5b5b':'#27d17f'));
+  const clip=document.getElementById('clipToggle').checked;
+  const activeVals=rows.filter(x=>!excluded.has(x.round)).map(x=>x.gap);
+  const yb = clip ? robustBounds(activeVals) : null;
+  const ctx=document.getElementById('chart');
+  if(chart) chart.destroy();
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{ if(els.length){ const rd=rows[els[0].index].round;
+        excluded.has(rd)?excluded.delete(rd):excluded.add(rd); compute(); } },
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{
+          title:it=>rows[it[0].index].raceName,
+          label:it=>{const x=rows[it.index];
+            return d.tipGap(x.sess,fmt(x.gap)) + (excluded.has(x.round)?d.tipExcluded:'');}
+        }}
+      },
+      scales:{
+        y:{ grid:{color:'#222a3a'}, ticks:{color:'#8a97ad',callback:v=>v+'%'},
+            title:{display:true,text:d.axisTitle(aCode),color:'#8a97ad'},
+            min: yb?yb.min:undefined, max: yb?yb.max:undefined },
+        x:{ grid:{display:false}, ticks:{color:'#8a97ad',maxRotation:0,autoSkip:true} }
+      }
+    },
+    plugins:[{
+      id:'medline_outliers',
+      afterDatasetsDraw(c){
+        const {ctx,chartArea:{left,right,top,bottom},scales:{y}}=c;
+        // labels on clipped outlier bars
+        if(yb){
+          const meta=c.getDatasetMeta(0);
+          ctx.save();ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+          rows.forEach((x,i)=>{
+            const over = x.gap>yb.max, under = x.gap<yb.min;
+            if(!over&&!under) return;
+            const px=meta.data[i].x;
+            ctx.fillStyle = excluded.has(x.round)?'#6b7790':(x.gap>=0?'#ff5b5b':'#27d17f');
+            if(over) ctx.fillText(fmt(x.gap)+'%', px, top+10);
+            else     ctx.fillText(fmt(x.gap)+'%', px, bottom-4);
+          });
+          ctx.restore();
+        }
+        // median line
+        if(med==null) return;
+        const yy=y.getPixelForValue(med);
+        if(yy<top||yy>bottom) return;
+        ctx.save();ctx.strokeStyle='#00b4ff';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(right,yy);ctx.stroke();
+        ctx.setLineDash([]);ctx.fillStyle='#00b4ff';ctx.font='11px sans-serif';
+        ctx.textAlign='right';ctx.fillText(d.medLabel(fmt(med)),right-4,yy-5);ctx.restore();
+      }
+    }]
+  });
+}
+
+/* ---------------- language application ---------------- */
+function applyLang(){
+  const d=D();
+  document.documentElement.lang=curLang;
+  document.title=d.title;
+  setT('t-title',d.title); setH('sub',d.sub);
+  setT('l-lang',d.lblLang); setT('l-season',d.lblSeason); setT('l-team',d.lblTeam);
+  setT('l-drvA',d.lblDrvA); setT('l-drvB',d.lblDrvB);
+  setT('k-median',d.cardMedian); setT('k-mean',d.cardMean); setT('k-h2h',d.cardH2H); setT('k-n',d.cardN);
+  setT('b1title',d.b1title); setH('b1hint',d.b1hint);
+  setT('b2title',d.b2title); setH('b2hint',d.b2hint);
+  setT('th-round',d.thRound); setT('th-sess',d.thSession); setT('th-gap',d.thGap); setT('th-faster',d.thFaster);
+  setT('clipLabel',d.clipLabel);
+  setH('footer',d.footer);
+  if(seasonData){
+    if(!elDrvA.disabled && !elDrvB.disabled && elDrvA.value!==elDrvB.value) compute();
+    if(elStatus.className!=='status err'){
+      elStatus.className='status';
+      elStatus.textContent=d.statLoaded(seasonData.year, seasonData.rounds.length,
+        seasonData._src==='local'?d.srcLocal:d.srcLive);
+    }
+  } else if(!elStatus.textContent || elStatus.className!=='status err'){
+    elStatus.textContent=d.statInit;
+  }
+}
+
+/* ---------------- events ---------------- */
+elLang.addEventListener('change',()=>{ curLang=elLang.value; applyLang(); });
+document.getElementById('clipToggle').addEventListener('change',compute);
+elSeason.addEventListener('change',loadSeason);
+elTeam.addEventListener('change',onTeamChange);
+elDrvA.addEventListener('change',compute);
+elDrvB.addEventListener('change',compute);
+
+applyLang();
+loadSeason();
+</script>
+</body>
+</html>
