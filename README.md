@@ -4,9 +4,10 @@ English | [日本語](./README.ja.md)
 
 An interactive, single-file web app that compares two teammates' **single-lap (qualifying) pace** across an F1 season using the **median qualifying gap** — a metric that is robust to crashes, yellow flags, and mechanical failures.
 
-🔗 **Live demo:** _(enable GitHub Pages, then put your URL here, e.g. `https://<your-username>.github.io/<repo>/f1-teammate-quali-gap.html`)_
+🔗 **Live demo:** https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html
 
-![screenshot](docs/screenshot.png)
+If the link returns 404, enable GitHub Pages for this repository first:
+**Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save**.
 
 ## Why median, not mean?
 
@@ -57,7 +58,7 @@ This writes `data/quali-<year>.json`. Refresh the page — it now runs offline.
 
 1. Create a repository and push these files (see below).
 2. On GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `main`, folder `/ (root)`, **Save**.
-3. After a minute your page is live at `https://<your-username>.github.io/<repo>/f1-teammate-quali-gap.html`.
+3. After a minute your page is live at `https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html`.
 
 ## Project structure
 

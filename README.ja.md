@@ -4,9 +4,10 @@
 
 F1 のあるシーズンを通して、2 人のチームメイトの**単独走行(予選)ペース**を**予選差の中央値**で比較する、単一ファイルのインタラクティブ Web アプリです。中央値はクラッシュ・黄旗・マシントラブルといった外れ値に強い指標です。
 
-🔗 **デモ:** _(GitHub Pages を有効化し、URL をここに記載。例:`https://<ユーザー名>.github.io/<リポジトリ>/f1-teammate-quali-gap.html`)_
+🔗 **デモ:** https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html
 
-![screenshot](docs/screenshot.png)
+リンクが 404 になる場合は、先にこのリポジトリで GitHub Pages を有効化してください:
+**Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save**。
 
 ## なぜ平均ではなく中央値か
 
@@ -57,7 +58,7 @@ python build_data.py 2021 2022 2023 2024   # 複数
 
 1. リポジトリを作成し、これらのファイルを push(下記参照)。
 2. GitHub で **Settings → Pages → Build and deployment → Source: Deploy from a branch**、ブランチ `main`、フォルダ `/ (root)`、**Save**。
-3. 1 分ほどで `https://<ユーザー名>.github.io/<リポジトリ>/f1-teammate-quali-gap.html` で公開されます。
+3. 1 分ほどで `https://hsu9ar.github.io/f1-teammate-quali-gap/f1-teammate-quali-gap.html` で公開されます。
 
 ## プロジェクト構成
 
