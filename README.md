@@ -1,4 +1,4 @@
-# F1 Teammate Qualifying Gap
+# F1 Teammate Median Qualifying Gap
 
 English | [日本語](./README.ja.md) | [简体中文](./README.zh.md)
 
