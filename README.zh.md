@@ -8,7 +8,7 @@
 
 ## 这个工具能做什么
 
-- 从免费的 Jolpica-F1 API 加载 F1 排位结果。
+- 从免费的 Jolpica-F1 API 加载 F1 排位结果（自动回退至 CORS 代理 → localStorage 缓存 → 捆绑离线快照）。
 - 选择赛季、车队和两位队友进行比较。
 - 计算每站百分比差距、赛季中位排位差、赛季平均差、队内对决比分和有效样本数。
 - 用柱状图展示每站差距,并提供针对极端值的聚焦视图。
@@ -52,21 +52,24 @@ gap% = (t_A - t_B) / t_B * 100
 
 本项目使用免费的 [Jolpica-F1 API](https://github.com/jolpica/jolpica-f1)。它是 Ergast API 的社区后继项目,不需要 API key。
 
+当实时 API 不可用时,应用会依次回退至 CORS 代理、上次成功加载的 localStorage 缓存,以及由每日 GitHub Actions 工作流生成的捆绑离线快照（`data/quali-<year>.json`）。
+
 ## 局限性
 
 - 数据源不会标注干地和湿地。
 - 删除圈、交通、黄旗、机械问题等情况仍需要手动判断和剔除。
 - 该指标只反映排位和单圈速度,不衡量正赛速度、轮胎管理或策略执行。
-- 应用依赖实时 API 的可用性。
+- 若实时 API、CORS 代理、缓存和离线快照均不可用，则无法加载数据。
 
 ## 项目结构
 
 ```text
-index.html                   # GitHub Pages 入口
-f1-teammate-quali-gap.html   # 静态网页应用
-README.md                    # 英文文档
-README.ja.md                 # 日文文档
-README.zh.md                 # 简体中文文档
+index.html                                    # GitHub Pages 入口
+f1-teammate-quali-gap.html                    # 静态网页应用（UI、i18n、fetch、计算、图表、表格）
+tools/build-snapshots.mjs                     # 离线排位快照生成脚本（Node）
+.github/workflows/update-snapshots.yml        # 每日刷新快照的 CI 作业
+data/quali-<year>.json                        # 生成的离线快照（由工作流创建）
+README.md / README.ja.md / README.zh.md       # 三语文档
 ```
 
 ## License

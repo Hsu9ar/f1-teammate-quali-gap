@@ -8,3 +8,6 @@ Thumbs.db
 
 # Staging for the separate data-backup repo (move it out to its own repo; do not commit here)
 f1-data-backup/
+
+# Local-only AI continuity notes (kept out of the public repo)
+AGENTS.md
