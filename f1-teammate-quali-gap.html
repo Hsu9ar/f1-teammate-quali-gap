@@ -580,7 +580,7 @@ function drawChart(rows, med, aCode){
         }}
       },
       scales:{
-        y:{ grid:{color:'#222a3a'}, ticks:{color:'#8a97ad',callback:v=>v+'%'},
+        y:{ grid:{color:'#222a3a'}, ticks:{color:'#8a97ad',callback:v=>(+v).toFixed(3)+'%'},
             title:{display:true,text:d.axisTitle(aCode),color:'#8a97ad'},
             min: yb?yb.min:undefined, max: yb?yb.max:undefined },
         x:{ grid:{display:false}, ticks:{color:'#8a97ad',maxRotation:0,autoSkip:true} }
@@ -628,14 +628,31 @@ function drawChart(rows, med, aCode){
           });
           ctx.restore();
         }
-        // median line
+        // median line + high-contrast label pill
         if(med==null) return;
         const yy=y.getPixelForValue(med);
         if(yy<top||yy>bottom) return;
-        ctx.save();ctx.strokeStyle='#00b4ff';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;
+        ctx.save();
+        ctx.strokeStyle='#00b4ff';ctx.setLineDash([6,4]);ctx.lineWidth=2;
         ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(right,yy);ctx.stroke();
-        ctx.setLineDash([]);ctx.fillStyle='#00b4ff';ctx.font='11px sans-serif';
-        ctx.textAlign='right';ctx.fillText(d.medLabel(fmt(med)),right-4,yy-5);ctx.restore();
+        ctx.setLineDash([]);
+        const mlabel=d.medLabel(fmt(med));
+        ctx.font='bold 12px sans-serif';ctx.textBaseline='middle';
+        const padX=8, bw=ctx.measureText(mlabel).width+padX*2, bh=20, r=6;
+        const bx=right-bw-4;
+        let by=yy-bh-5;                       // sit above the line
+        if(by<top+2) by=yy+5;                 // flip below if near the top edge
+        ctx.beginPath();
+        ctx.moveTo(bx+r,by);
+        ctx.arcTo(bx+bw,by,bx+bw,by+bh,r);
+        ctx.arcTo(bx+bw,by+bh,bx,by+bh,r);
+        ctx.arcTo(bx,by+bh,bx,by,r);
+        ctx.arcTo(bx,by,bx+bw,by,r);
+        ctx.closePath();
+        ctx.fillStyle='#00b4ff';ctx.fill();   // solid blue pill
+        ctx.fillStyle='#06121f';ctx.textAlign='left';
+        ctx.fillText(mlabel,bx+padX,by+bh/2); // dark text for contrast
+        ctx.restore();
       }
     }]
   });
